@@ -10,3 +10,5 @@
 /ZeppelinRemoteNotebooks/
 /.idea
 /.git-credentials
+node_modules
+package-lock.json

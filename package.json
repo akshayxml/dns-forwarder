@@ -1,0 +1,8 @@
+{
+  "name": "dns-forwarder",
+  "version": "1.0.0",
+  "dependencies": {
+    "http": "^0.0.1-security",
+    "yargs": "^17.7.2"
+  }
+}
