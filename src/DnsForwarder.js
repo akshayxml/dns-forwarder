@@ -1,5 +1,7 @@
 const StaticFunctions = require('./utils/StaticFunctions')
 const DnsParser = require('./utils/DnsParser')
+const dgram = require('dgram');
+
 class DnsForwarder {
     constructor() {
         this.staticFunctions = new StaticFunctions();
@@ -20,6 +22,10 @@ class DnsForwarder {
         console.log("Additionals - ")
         console.log(this.dnsParser.additionals)
         console.log("-------++++-------")
+    }
+
+    stop(){
+        // this.client.close();
     }
 }
 
