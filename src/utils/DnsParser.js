@@ -1,40 +1,5 @@
 class DnsParser{
-    parse(request) {
-        this.header = {}
-        this.questions = []
-        this.answers = []
-        this.authorities = []
-        this.additionals = []
-        this._index = parseHeader(request, this._index, this.header);
-        for(let i=0; i<this.header.qdcount; i++){
-            this.question = {};
-            this._index = parseQuestion(request, this._index, this.question);
-            this.questions.push(this.question)
-        }
-        console.log(request)
-        console.log(this.header)
-        for(let i=0; i<this.header.ancount; i++){
-            this.answer = {}
-            this._index = parseResource(request, this._index, this.answer);
-            this.answers.push(this.answer)
-        }
-        console.log(this.answers)
-        for(let i=0; i<this.header.nscount; i++){
-            this.authority = {}
-            this._index = parseResource(request, this._index, this.authority);
-            this.authorities.push(this.authority)
-        }
-        for(let i=0; i<this.header.arcount; i++){
-            this.additional = {}
-            this._index = parseResource(request, this._index, this.additional);
-            this.additionals.push(this.additional)
-        }
-        console.log(this.additionals)
-    }
-}
-
-function parseHeader(request, index, header){
-    const headerFields = [
+    headerFields = [
         'id',
         'flags',
         'qdcount',
@@ -42,14 +7,54 @@ function parseHeader(request, index, header){
         'nscount',
         'arcount'
     ];
+    questionFields = ['qname', 'qtype', 'qclass']
+    resourceFields = ["name", "type", "class", "ttl", "rdlength", "rdata"];
+    parse(request) {
+        this.header = {}
+        this.questions = []
+        this.answers = []
+        this.authorities = []
+        this.additionals = []
+        this._index = parseHeader(request, this._index, this.header, this.headerFields);
+        for(let i=0; i<this.header.qdcount; i++){
+            this.question = {};
+            this._index = parseQuestion(request, this._index, this.question, this.questionFields);
+            this.questions.push(this.question)
+        }
+        for(let i=0; i<this.header.ancount; i++){
+            this.answer = {}
+            this._index = parseResource(request, this._index, this.answer, this.resourceFields);
+            this.answers.push(this.answer)
+        }
+        for(let i=0; i<this.header.nscount; i++){
+            this.authority = {}
+            this._index = parseResource(request, this._index, this.authority, this.resourceFields);
+            this.authorities.push(this.authority)
+        }
+        for(let i=0; i<this.header.arcount; i++){
+            this.additional = {}
+            this._index = parseResource(request, this._index, this.additional, this.resourceFields);
+            this.additionals.push(this.additional)
+        }
+    }
+
+    getSerialisedQuestion(question){
+        let response = ""
+        this.questionFields.forEach(field => {
+            response += question[field] + ":"
+        });
+        return response
+    }
+}
+
+function parseHeader(request, index, header, headerFields){
     for (index = 0; index < headerFields.length; index++) {
         header[headerFields[index]] = parseInt(request[index * 2].toString() + request[index * 2 + 1].toString());
     }
     return index*2;
 }
 
-function parseQuestion(request, index, question){
-    const questionFields = ['qname', 'qtype', 'qclass']
+function parseQuestion(request, index, question, questionFields){
     let {updatedIndex, domainName} = getDomainName(request, index);
     index = updatedIndex;
 
@@ -60,11 +65,7 @@ function parseQuestion(request, index, question){
     return index+2
 }
 
-function parseResource(request, index, resource){
-    const resourceFields = ["name", "type", "class", "ttl", "rdlength", "rdata"];
-    console.log(request)
-    console.log(index)
-    console.log(request[index])
+function parseResource(request, index, resource, resourceFields){
     let {updatedIndex, domainName} = getDomainName(request, index);
     index = updatedIndex;
     resource[resourceFields[0]] = domainName.substring(0, domainName.length - 1);
@@ -79,7 +80,6 @@ function parseResource(request, index, resource){
     resource[resourceFields[3]] = parseInt(request[index].toString() + request[index + 1].toString() +
                                                     request[index + 2].toString() + request[index + 3].toString());
     index += 4;
-
 
     // Parse RDLENGTH
     resource[resourceFields[4]] = parseInt(request[index].toString() + request[index + 1].toString());
