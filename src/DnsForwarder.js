@@ -10,12 +10,12 @@ class DnsForwarder {
     forward(request){
         return new Promise((resolve, reject) => {
             this.client.send(request, 53, '8.8.8.8', (error) => {
-                console.log("request sent")
+                console.log("Request sent to dns server")
                 if (error) {
                     console.error('Error sending message:', error);
                     this.client.close();
                 } else {
-                    this.client.on('message', (responseMsg, responseInfo) => {
+                    this.client.once('message', (responseMsg, responseInfo) => {
                         console.log(`Received response message from ${responseInfo.address}:${responseInfo.port}: ${responseMsg}`);
                         this.set(responseMsg);
                     });
@@ -27,38 +27,35 @@ class DnsForwarder {
     get(request){
         this.dnsParser = new DnsParser()
         this.dnsParser.parse(request);
-        // console.log("Request received -->")
-        // console.log("Header - ")
-        // console.log(this.dnsParser.header)
-        // console.log("Questions - ")
-        // console.log(this.dnsParser.questions)
-        // console.log("Answers - ")
-        // console.log(this.dnsParser.answers)
-        // console.log("Authorities - ")
-        // console.log(this.dnsParser.authorities)
-        // console.log("Additionals - ")
-        // console.log(this.dnsParser.additionals)
-        // console.log("-------++++-------")
         let serialisedQuestion = this.dnsParser.getSerialisedQuestion(this.dnsParser.question)
-        console.log(serialisedQuestion)
-        if(serialisedQuestion in this.dnsResolutionCache){
+        if(serialisedQuestion in this.dnsResolutionCache && !this._checkIfRecordExpired(this.dnsResolutionCache, serialisedQuestion)){
             return this._updateId(request, serialisedQuestion)
         }
         return null;
     }
 
-    set(request){
+    set(response){
         this.dnsParser = new DnsParser()
-        this.dnsParser.parse(request);
+        this.dnsParser.parse(response);
+        console.log(this.dnsParser.answers[0].ttl)
         let serialisedQuestion = this.dnsParser.getSerialisedQuestion(this.dnsParser.question)
-        this.dnsResolutionCache[serialisedQuestion] = request;
+        this.dnsResolutionCache[serialisedQuestion] = {response: response,
+                                                        expiryTime: this._getTimeInSeconds() + this.dnsParser.answers[0].ttl};
     }
 
     _updateId(request, cacheKey){
-        let response = this.dnsResolutionCache[cacheKey];
+        let response = this.dnsResolutionCache[cacheKey]['response'];
         response[0] = request[0];
         response[1] = request[1];
         return response;
+    }
+
+    _getTimeInSeconds(){
+        return Math.floor(new Date().getTime() / 1000);
+    }
+
+    _checkIfRecordExpired(cache, cacheKey){
+        return 'expiryTime' in cache[cacheKey] && cache[cacheKey]['expiryTime'] < this._getTimeInSeconds();
     }
 
     close(){
