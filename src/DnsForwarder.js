@@ -1,4 +1,4 @@
-const DnsParser = require('./utils/DnsParser')
+const DnsParser = require('./DnsParser')
 const dgram = require('dgram');
 
 class DnsForwarder {
@@ -37,7 +37,6 @@ class DnsForwarder {
     set(response){
         this.dnsParser = new DnsParser()
         this.dnsParser.parse(response);
-        console.log(this.dnsParser.answers[0].ttl)
         let serialisedQuestion = this.dnsParser.getSerialisedQuestion(this.dnsParser.question)
         this.dnsResolutionCache[serialisedQuestion] = {response: response,
                                                         expiryTime: this._getTimeInSeconds() + this.dnsParser.answers[0].ttl};
